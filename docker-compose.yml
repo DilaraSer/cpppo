@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  cpppo-server:
+    build:
+      context: .
+    ports:
+      # - "44818-44917:44818"
+      - "44818-44827:44818"
+    deploy:
+      replicas: 10
