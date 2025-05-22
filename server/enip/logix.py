@@ -36,6 +36,7 @@ import json
 import logging
 import sys
 import threading
+import time
 import traceback
 
 from ...dotdict import dotdict
@@ -50,6 +51,8 @@ from .parser import ( BOOL, ULINT, LINT, UDINT, DINT, UINT, INT, USINT, SINT, ST
                       move_if, octets_drop, octets_noop, enip_format, status )
 
 log				= logging.getLogger( "enip.lgx" )
+
+registered_tag_names = []
 
 # Unknown Object, Class 102, Instance 1.  This Object is unknown, but it returns data equivalent to
 # the following Attributes, when queried.
@@ -763,6 +766,7 @@ def setup_tag( key, val ):
         log.normal( "Set Tag %-14s%-10s: %-24s Instance %3d Added: %s",
                     key, "@%s/%s/%s" % ( cls, ins, att ), instance, ins,
                     attribute if log.isEnabledFor( logging.INFO ) else misc.reprlib.repr( attribute ))
+        registered_tag_names.append(key)
 
         # Finally, set tag 'key' to point to the (now existing) Class, Instance, Attribute
         redirect_tag( key, {'class': cls, 'instance': ins, 'attribute': att })
@@ -1017,3 +1021,19 @@ def process( addr, data, **kwds ):
                    ( '' if log.getEffectiveLevel() >= logging.NORMAL
                      else ''.join( traceback.format_exception( *sys.exc_info() ))))
         raise
+
+
+def start_counter_thread(interval=1.0):
+    def run():
+        while True:
+            for tag_name in registered_tag_names:
+                # print(f"Incrementing tag: {tag_name}")
+                res = resolve_tag(tag_name)
+                if res:
+                    attribute = lookup(*res)
+                    attribute[0] += 1
+            time.sleep(interval)
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+
+start_counter_thread(interval=0.5)
